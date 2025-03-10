@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Mapster;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,12 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
             return Unauthorized("User not authenticated");
         var technician = await _context.Technicians
             .Where(t => t.UserId == techId)
+            .Include(o => o.User)
+            .Include(o => o.Service)
+            .FirstOrDefaultAsync();
+        var customer = await _context.Customers
+            .Where(t => t.UserId == userId)
+            .Include(o => o.User)
             .FirstOrDefaultAsync();
         if (technician == null)
         {
@@ -35,20 +42,20 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
         }
         var order = new Order
         {
-            UserId = userId,
-            ServiceId = technician.ServiceId,
+            CustomerId = userId,
+            Customer = customer,
+            Technician = technician,
             TechnicianID = technician.UserId, // ✅ إضافة الفني
             ProblemDescription = request.ProblemDescription, // ✅ إضافة الفني
             Status = "Pending",
             createdOn = DateTime.UtcNow
         };
-
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetOrderById), new { id = order.OrderId }, order);
+        return CreatedAtAction(nameof(GetOrderById), new { id = order.OrderId }, order.Adapt<OrderResponset>());
     }
     [HttpGet("{id}")]
-    [Authorize] // تأكد من أن المستخدم مسجل الدخول
+    [Authorize] 
     public async Task<IActionResult> GetOrderById(int id)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -56,13 +63,17 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
             return Unauthorized("User not authenticated");
 
         var order = await _context.Orders
-            .Include(o => o.Service)
-            .FirstOrDefaultAsync(o => o.OrderId == id && o.UserId == userId);
+            .Include(o => o.Technician)
+            .Include(o => o.Technician.User)
+            .Include(o => o.Technician.Service)
+            .Include(o => o.Customer)
+            .Include(o => o.Customer.User)
+            .FirstOrDefaultAsync(o => o.OrderId == id && o.CustomerId == userId);
 
         if (order == null)
             return NotFound("Order not found or you don't have access");
-
-        return Ok(order);
+        
+        return Ok(order.Adapt<OrderResponset>());    
     }
     [HttpGet("my-orders")]
     [Authorize] // لضمان أن المستخدم مسجل الدخول
@@ -73,12 +84,13 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
             return Unauthorized("User not authenticated");
 
         var orders = await _context.Orders
-            .Where(o => o.UserId == userId)
-            .Include(o => o.Service)
+            .Where(o => o.CustomerId == userId)
+            .Include(o => o.Technician)
+            .Include(o => o.Technician.User)
+            .Include(o => o.Technician.Service)
+            .Include(o => o.Customer)
+            .Include(o => o.Customer.User)
             .ToListAsync();
-
-        return Ok(orders);
+        return Ok(orders.Adapt<IEnumerable<OrderResponset>>());
     }
-
-
 }

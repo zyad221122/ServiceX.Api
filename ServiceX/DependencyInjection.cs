@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Mapster;
+using MapsterMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ServiceX.Entites;
 using ServiceX.Persistence;
 using ServiceX.Services;
+using System.Reflection;
 using System.Text;
 
 namespace ServiceX;
@@ -22,9 +25,19 @@ public static class DependencyInjection
             options.UseSqlServer(connectionString));
         #endregion
        services.AddAuthServices(configuration);
+        services.AddMapsterServices();
         return services;
     }
-
+    public static IServiceCollection AddMapsterServices(this IServiceCollection services)
+    {
+        #region Add mapster configurations
+        //Add mapster configurations//
+        var mappingConfig = TypeAdapterConfig.GlobalSettings;
+        mappingConfig.Scan(Assembly.GetExecutingAssembly());
+        services.AddSingleton<IMapper>(new Mapper(mappingConfig));
+        #endregion
+        return services;
+    }
     public static IServiceCollection AddAuthServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddIdentity<ApplicationUser, IdentityRole>()

@@ -12,16 +12,12 @@ public class OrderConfigurations : IEntityTypeConfiguration<Order>
 
         builder.HasOne(o => o.Customer)
                .WithMany(c => c.Orders)
-               .HasForeignKey(o => o.UserId)
+               .HasForeignKey(o => o.CustomerId)
                .OnDelete(DeleteBehavior.Restrict); // منع الحذف التتابعي
 
         builder.HasOne(o => o.Technician)
                .WithMany(t => t.Orders)
                .HasForeignKey(o => o.TechnicianID)
                .OnDelete(DeleteBehavior.Restrict); // منع الحذف التتابعي
-
-        builder.HasOne(o => o.Service)
-               .WithMany()
-               .HasForeignKey(o => o.ServiceId);
     }
 }
