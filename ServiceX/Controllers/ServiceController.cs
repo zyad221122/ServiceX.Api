@@ -73,7 +73,7 @@ public class ServiceController(ApplicationDbContext context, IServiceServices _s
     {
         var service = await _context.Services.FindAsync(id);
         if (service == null)
-            return NotFound("Service not found");
+            return NotFound("Service not founded");
 
         service.Name = updatedService.Name;
         service.Description = updatedService.Description;
