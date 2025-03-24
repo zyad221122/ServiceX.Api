@@ -2,6 +2,7 @@
 
 public class OrderResponset
 {
+    public int Id{ get; set; }
     public string UserName { get; set; }
     public string OrderStatus { get; set; }
     public string problemDescription { get; set; }

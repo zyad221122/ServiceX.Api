@@ -15,7 +15,17 @@ namespace ServiceX
             builder.Services.AddDependencies(builder.Configuration);
             builder.Services.AddControllers();
             builder.Services.AddOpenApi();
-
+            var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy(name: MyAllowSpecificOrigins,
+                    policy =>
+                    {
+                        policy.AllowAnyOrigin()
+                              .AllowAnyMethod()
+                              .AllowAnyHeader();
+                    });
+            });
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -23,8 +33,9 @@ namespace ServiceX
             {
                 app.MapOpenApi();
             }
-
-            app.UseHttpsRedirection();
+            app.UseCors(MyAllowSpecificOrigins);
+            //app.UseHttpsRedirection();
+            app.UseStaticFiles();
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
