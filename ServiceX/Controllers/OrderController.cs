@@ -27,6 +27,7 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
         var userId = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
             return Unauthorized("User not authenticated");
+        
         var technician = await _context.Technicians
             .Where(t => t.UserId == techId)
             .Include(o => o.User)

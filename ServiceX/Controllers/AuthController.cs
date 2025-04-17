@@ -1,35 +1,22 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.Data;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using ServiceX.Contracts;
-using ServiceX.Entites;
-using ServiceX.Persistence;
-using System.Data;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
-
-namespace ServiceX.Controllers;
+﻿namespace ServiceX.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 public class AuthController(UserManager<ApplicationUser> userManager, 
                             SignInManager<ApplicationUser> signInManager,
                             RoleManager<IdentityRole> roleManager,
                             IConfiguration configuration,
-                            ApplicationDbContext context) : ControllerBase
+                            ApplicationDbContext context,
+                            IAuthServices _authenticationService) : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly RoleManager<IdentityRole> _roleManager = roleManager;
     private readonly IConfiguration _configuration = configuration;
     private readonly ApplicationDbContext _context = context;
     private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
+    private readonly IAuthServices authenticationService = _authenticationService;
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterModel model)
+    public async Task<IActionResult> Register([FromForm] RegisterModel model)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -43,6 +30,8 @@ public class AuthController(UserManager<ApplicationUser> userManager,
         if (model.Role == "Technician" && !model.ServiceId.HasValue)
             return BadRequest(new { message = "ServiceId is required for Technicians." });
 
+        var imgname = await authenticationService.UploadImageAsync(model.Cover!);
+
         // إنشاء المستخدم
         var user = new ApplicationUser
         {
@@ -50,7 +39,9 @@ public class AuthController(UserManager<ApplicationUser> userManager,
             Email = model.Email,
             FirstName = model.FirstName,
             LastName = model.LastName,
-            Phone = model.Phone
+            Phone = model.Phone,
+            Address = model.Address,
+            ImageUrl = imgname
         };
 
         var result = await _userManager.CreateAsync(user, model.Password);

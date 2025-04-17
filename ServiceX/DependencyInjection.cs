@@ -16,6 +16,7 @@ public static class DependencyInjection
     public static IServiceCollection AddDependencies(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IServiceServices, ServiceSeervices>();
+        services.AddScoped<IAuthServices, AuthServices>();
 
         #region Add Database
         var connectionString = configuration.GetConnectionString("DefaultConnection") ??

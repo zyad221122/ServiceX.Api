@@ -13,6 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Technician> Technicians { get; set; }
     public DbSet<Service> Services { get; set; }
     public DbSet<Order> Orders { get; set; }
+    public DbSet<CodesForCharge> CodesForCharges { get; set; }
     public DbSet<Review> Reviews { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

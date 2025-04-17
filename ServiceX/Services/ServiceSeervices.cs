@@ -22,6 +22,7 @@ public class ServiceSeervices(ApplicationDbContext context, IWebHostEnvironment 
         var path = Path.Combine(_imagesPath, fileName);
         using var stream = File.Create(path);
         await image.CopyToAsync(stream, cancellationToken);
+        //return "http://servicex.runasp.net/images/services/" + fileName;
         return "http://servicex.runasp.net/images/services/" + fileName;
     }
 }
