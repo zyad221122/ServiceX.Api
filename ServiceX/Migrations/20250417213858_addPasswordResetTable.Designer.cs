@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ServiceX.Persistence;
 
@@ -11,9 +12,11 @@ using ServiceX.Persistence;
 namespace ServiceX.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250417213858_addPasswordResetTable")]
+    partial class addPasswordResetTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -258,7 +261,7 @@ namespace ServiceX.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CodesForCharges", (string)null);
+                    b.ToTable("CodesForCharges");
                 });
 
             modelBuilder.Entity("ServiceX.Entites.Customer", b =>
@@ -271,7 +274,7 @@ namespace ServiceX.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("Customers", (string)null);
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("ServiceX.Entites.Order", b =>
@@ -307,7 +310,7 @@ namespace ServiceX.Migrations
 
                     b.HasIndex("TechnicianID");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("ServiceX.Entites.PasswordReset", b =>
@@ -331,7 +334,7 @@ namespace ServiceX.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PasswordResets", (string)null);
+                    b.ToTable("PasswordResets");
                 });
 
             modelBuilder.Entity("ServiceX.Entites.Review", b =>
@@ -362,7 +365,7 @@ namespace ServiceX.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Reviews", (string)null);
+                    b.ToTable("Reviews");
                 });
 
             modelBuilder.Entity("ServiceX.Entites.Service", b =>
@@ -387,7 +390,7 @@ namespace ServiceX.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Services", (string)null);
+                    b.ToTable("Services");
                 });
 
             modelBuilder.Entity("ServiceX.Entites.Technician", b =>
@@ -401,9 +404,6 @@ namespace ServiceX.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("int");
 
-                    b.Property<int>("PayByHour")
-                        .HasColumnType("int");
-
                     b.Property<int>("ServiceId")
                         .HasColumnType("int");
 
@@ -411,7 +411,7 @@ namespace ServiceX.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("Technicians", (string)null);
+                    b.ToTable("Technicians");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

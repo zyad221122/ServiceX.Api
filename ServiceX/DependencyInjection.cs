@@ -17,6 +17,8 @@ public static class DependencyInjection
     {
         services.AddScoped<IServiceServices, ServiceSeervices>();
         services.AddScoped<IAuthServices, AuthServices>();
+        services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+        services.AddScoped<IEmailService, EmailService>();
 
         #region Add Database
         var connectionString = configuration.GetConnectionString("DefaultConnection") ??

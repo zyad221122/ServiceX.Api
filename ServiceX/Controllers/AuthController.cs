@@ -1,19 +1,27 @@
 ﻿namespace ServiceX.Controllers;
+
 [Route("api/[controller]")]
 [ApiController]
-public class AuthController(UserManager<ApplicationUser> userManager, 
+public class AuthController(
+ #region Parameters
+        UserManager<ApplicationUser> userManager,
                             SignInManager<ApplicationUser> signInManager,
                             RoleManager<IdentityRole> roleManager,
                             IConfiguration configuration,
                             ApplicationDbContext context,
-                            IAuthServices _authenticationService) : ControllerBase
+                            IAuthServices _authenticationService, IEmailService emailService 
+    #endregion
+    ) : ControllerBase
 {
+    #region Fields
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly RoleManager<IdentityRole> _roleManager = roleManager;
     private readonly IConfiguration _configuration = configuration;
     private readonly ApplicationDbContext _context = context;
     private readonly SignInManager<ApplicationUser> _signInManager = signInManager;
     private readonly IAuthServices authenticationService = _authenticationService;
+    private readonly IEmailService emailService = emailService; 
+    #endregion
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromForm] RegisterModel model)
@@ -128,5 +136,115 @@ public class AuthController(UserManager<ApplicationUser> userManager,
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+
+    [HttpPost("send-otp")]
+    public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+            return NotFound("No user found with this email.");
+
+        // Generate OTP
+        var otp = new Random().Next(100000, 999999).ToString();
+
+        // Save OTP temporarily (e.g., in memory, cache, or DB - here we'll use claims for simplicity)
+        user.SecurityStamp = otp; // (بديل سريع ومؤقت – الأفضل قاعدة بيانات حقيقية أو Redis)
+        await _userManager.UpdateAsync(user);
+
+        // Send email (هنا لازم تستخدم خدمة إرسال بريد إلكتروني حقيقية)
+        await emailService.SendEmailAsync(user.Email, "Password Reset OTP", $"Your OTP is: {otp}");
+
+        return Ok(new { message = "OTP has been sent to your email." });
+    }
+
+    [HttpPost("verify-otp-reset-password")]
+    public async Task<IActionResult> VerifyOtpAndResetPassword([FromBody] VerifyOtpAndResetPasswordRequest request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+            return NotFound("User not found.");
+
+        if (user.SecurityStamp != request.Otp)
+            return BadRequest("Invalid OTP.");
+
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var resetResult = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
+
+        if (!resetResult.Succeeded)
+            return BadRequest(resetResult.Errors);
+
+        // Clear OTP
+        user.SecurityStamp = Guid.NewGuid().ToString(); // للتأكد من مسح الـ OTP
+        await _userManager.UpdateAsync(user);
+
+        return Ok(new { message = "Password has been reset successfully." });
+    }
+
+   
+    [HttpPost("forget-password")]
+    public async Task<IActionResult> ForgetPassword([FromBody] SendOtpRequest sendOtpRequest)
+    {
+        var user = await _userManager.FindByEmailAsync(sendOtpRequest.Email);
+        if (user == null)
+            return NotFound(new { message = "عنوان البريد الإلكتروني غير متاح" });
+
+        // إنشاء كود OTP عشوائي (مثلاً 6 أرقام)
+        var otp = new Random().Next(100000, 999999).ToString();
+
+        // خزّنه في جدول PasswordReset
+        var resetEntry = new PasswordReset
+        {
+            Email = sendOtpRequest.Email,
+            OtpCode = otp,
+            ExpiryTime = DateTime.UtcNow.AddMinutes(10)
+        };
+
+        _context.PasswordResets.Add(resetEntry);
+        await _context.SaveChangesAsync();
+
+        // إرسال الإيميل
+        await emailService.SendEmailAsync(user.Email!, "تغيير كلمه السر", $"{otp}");
+
+        return Ok("OTP sent to email.");
+    }
+    [HttpPost("verify-otp")]
+    public IActionResult VerifyOtp([FromBody] OtpVerifyModel model)
+    {
+        var otpEntry = _context.PasswordResets
+            .FirstOrDefault(p => p.OtpCode == model.OtpCode);
+
+        if (otpEntry == null || otpEntry.ExpiryTime < DateTime.UtcNow)
+            return BadRequest(new { message = "رمز تحقق غير صحيح أو منتهي الصلاحيه" });
+
+        return Ok("OTP verified");
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
+    {
+        var otpEntry = _context.PasswordResets
+            .FirstOrDefault(p => p.Email == model.Email );
+
+        if (otpEntry == null)
+            return BadRequest(new { message = "تحقق من البريد الإلكتروني" });
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+            return NotFound(new { message = "تحقق من البريد الإلكتروني" });
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+
+        // حذف OTP بعد الاستخدام
+        _context.PasswordResets.Remove(otpEntry);
+        await _context.SaveChangesAsync();
+
+        return Ok("تم تغيير كلمه السر بنجاح");
+    }
+
 }
 

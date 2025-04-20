@@ -11,6 +11,7 @@ public class Technician
     public ApplicationUser User { get; set; } // العلاقة مع `ApplicationUser`
     public string? Address { get; set; } // السماح بالقيم الفارغة
     public int ServiceId { get; set; } // المفتاح الأجنبي للخدمة
+    public int PayByHour { get; set; } // المفتاح الأجنبي للخدمة
     public Service? Service { get; set; } // العلاقة مع `Service`
     [JsonIgnore]
     public ICollection<Order>? Orders { get; set; } // تهيئة القائمة

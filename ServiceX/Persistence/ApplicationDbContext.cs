@@ -10,6 +10,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
 
     public DbSet<Customer> Customers { get; set; }
+    public DbSet<PasswordReset> PasswordResets { get; set; }
     public DbSet<Technician> Technicians { get; set; }
     public DbSet<Service> Services { get; set; }
     public DbSet<Order> Orders { get; set; }
