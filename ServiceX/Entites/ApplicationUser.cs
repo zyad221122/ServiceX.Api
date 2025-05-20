@@ -11,4 +11,5 @@ public class ApplicationUser :  IdentityUser
     public string? ImageUrl { get; set; }
     public string? Phone { get; set; }
     public string? City { get; set; }
+    
 }

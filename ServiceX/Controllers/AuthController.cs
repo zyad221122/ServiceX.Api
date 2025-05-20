@@ -5,11 +5,11 @@
 public class AuthController(
  #region Parameters
         UserManager<ApplicationUser> userManager,
-                            SignInManager<ApplicationUser> signInManager,
-                            RoleManager<IdentityRole> roleManager,
-                            IConfiguration configuration,
-                            ApplicationDbContext context,
-                            IAuthServices _authenticationService, IEmailService emailService 
+        SignInManager<ApplicationUser> signInManager,
+        RoleManager<IdentityRole> roleManager,
+        IConfiguration configuration,
+        ApplicationDbContext context,
+        IAuthServices _authenticationService, IEmailService emailService 
     #endregion
     ) : ControllerBase
 {
@@ -65,6 +65,7 @@ public class AuthController(
             {
                 UserId = user.Id,
                 Address = model.Address,
+                PayByHour = (int)model.PayByHour!,
                 ServiceId = model.ServiceId!.Value
             });
         }
@@ -137,51 +138,6 @@ public class AuthController(
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-
-    [HttpPost("send-otp")]
-    public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request)
-    {
-        var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user == null)
-            return NotFound("No user found with this email.");
-
-        // Generate OTP
-        var otp = new Random().Next(100000, 999999).ToString();
-
-        // Save OTP temporarily (e.g., in memory, cache, or DB - here we'll use claims for simplicity)
-        user.SecurityStamp = otp; // (بديل سريع ومؤقت – الأفضل قاعدة بيانات حقيقية أو Redis)
-        await _userManager.UpdateAsync(user);
-
-        // Send email (هنا لازم تستخدم خدمة إرسال بريد إلكتروني حقيقية)
-        await emailService.SendEmailAsync(user.Email, "Password Reset OTP", $"Your OTP is: {otp}");
-
-        return Ok(new { message = "OTP has been sent to your email." });
-    }
-
-    [HttpPost("verify-otp-reset-password")]
-    public async Task<IActionResult> VerifyOtpAndResetPassword([FromBody] VerifyOtpAndResetPasswordRequest request)
-    {
-        var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user == null)
-            return NotFound("User not found.");
-
-        if (user.SecurityStamp != request.Otp)
-            return BadRequest("Invalid OTP.");
-
-        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var resetResult = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
-
-        if (!resetResult.Succeeded)
-            return BadRequest(resetResult.Errors);
-
-        // Clear OTP
-        user.SecurityStamp = Guid.NewGuid().ToString(); // للتأكد من مسح الـ OTP
-        await _userManager.UpdateAsync(user);
-
-        return Ok(new { message = "Password has been reset successfully." });
-    }
-
-   
     [HttpPost("forget-password")]
     public async Task<IActionResult> ForgetPassword([FromBody] SendOtpRequest sendOtpRequest)
     {

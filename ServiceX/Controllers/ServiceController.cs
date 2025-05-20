@@ -94,6 +94,8 @@ public class ServiceController(ApplicationDbContext context, IServiceServices _s
                 t.User.Email,
                 t.User.Phone,
                 t.Address,
+                t.User.ImageUrl,
+                t.PayByHour,
                 t.Service.Name
             })
             .ToListAsync();

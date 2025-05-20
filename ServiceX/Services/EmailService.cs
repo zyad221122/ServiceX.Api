@@ -17,7 +17,8 @@ public class EmailService : IEmailService
     public async Task SendEmailAsync(string toEmail, string subject, string otp)
     {
         var email = new MimeMessage();
-        email.From.Add(new MailboxAddress(_emailSettings.SenderName, _emailSettings.SenderEmail));
+        //email.From.Add(new MailboxAddress(_emailSettings.SenderName, _emailSettings.SenderEmail));
+        email.From.Add(new MailboxAddress("ServiceX | سيرفس إكس", _emailSettings.SenderEmail));
         email.To.Add(MailboxAddress.Parse(toEmail));
         email.Subject = subject;
 
@@ -37,7 +38,6 @@ public class EmailService : IEmailService
                     <h2>ServiceX</h2>
                 </div>
                 <p style='font-size: 20px; text-align: center;'>مرحبًا</p>               
-                <p style='font-size: 20px; text-align: center;'>شكرًا لاستخدامك خدمة سيرفس اكس</p>
                 <p style='font-size: 20px; text-align: center;'>استخدم رمز التحقق التالي لإتمام إجراء تغيير كلمة المرور الخاصة بك</p>    
                 <p style='font-size: 20px; text-align: center;'>يرجى عدم مشاركة هذا الرمز مع أي شخص، بما في ذلك موظفي سيرفس اكس، حفاظًا على خصوصيتك وأمان حسابك</p>    
                 <p style='font-size: 20px; text-align: center;'>الكود صالح لمدة 10 دقائق</p>

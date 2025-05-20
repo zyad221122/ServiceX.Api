@@ -49,7 +49,6 @@ namespace ServiceX
 
             app.Run();
         }
-
         private static async Task CreateRoles(IServiceProvider serviceProvider)
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();

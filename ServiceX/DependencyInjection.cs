@@ -27,7 +27,7 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(connectionString));
         #endregion
-       services.AddAuthServices(configuration);
+        services.AddAuthServices(configuration);
         services.AddMapsterServices();
         return services;
     }

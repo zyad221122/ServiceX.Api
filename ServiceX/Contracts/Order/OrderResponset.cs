@@ -8,4 +8,10 @@ public class OrderResponset
     public string problemDescription { get; set; }
     public string TechnicianName { get; set; }
     public string ServiceName { get; set; }
+    public bool isCompletedByCustomer { get; set; } 
+    public bool isCompletedByTechnician { get; set; }
+    public double Period { get; set; }
+    public double Price { get; set; }
+
+    //public DateTime createdOn { get; set; }
 }

@@ -37,6 +37,11 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
             .Where(t => t.UserId == userId)
             .Include(o => o.User)
             .FirstOrDefaultAsync();
+
+        if (customer!.Balanace < 200)
+        {
+            return BadRequest(new { message = "برجاء شحن المحفظه" });
+        }
         if (technician == null)
         {
             return BadRequest("No available technician for this service.");
@@ -55,6 +60,7 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetOrderById), new { id = order.OrderId }, order.Adapt<OrderResponset>());
     }
+    
     [HttpGet("{id}")]
     [Authorize] 
     public async Task<IActionResult> GetOrderById(int id)
@@ -76,22 +82,140 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
         
         return Ok(order.Adapt<OrderResponset>());    
     }
-    [HttpGet("my-orders")]
-    [Authorize] // لضمان أن المستخدم مسجل الدخول
-    public async Task<IActionResult> GetMyOrders()
+    
+    
+    [HttpGet("my-orders/completed")]
+    [Authorize]
+    public async Task<IActionResult> GetMyCompletedOrders()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized("User not authenticated");
 
         var orders = await _context.Orders
-            .Where(o => o.CustomerId == userId)
+            .Where(o => o.CustomerId == userId && o.Status == "Completed")
             .Include(o => o.Technician)
             .Include(o => o.Technician.User)
             .Include(o => o.Technician.Service)
             .Include(o => o.Customer)
             .Include(o => o.Customer.User)
             .ToListAsync();
+
         return Ok(orders.Adapt<IEnumerable<OrderResponset>>());
     }
+
+    
+    [HttpGet("my-orders/pending")]
+    [Authorize]
+    public async Task<IActionResult> GetMyPendingOrders()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized("User not authenticated");
+
+        var orders = await _context.Orders
+            .Where(o => o.CustomerId == userId && o.Status == "Pending")
+            .Include(o => o.Technician)
+            .Include(o => o.Technician.User)
+            .Include(o => o.Technician.Service)
+            .Include(o => o.Customer)
+            .Include(o => o.Customer.User)
+            .ToListAsync();
+
+        return Ok(orders.Adapt<IEnumerable<OrderResponset>>());
+    }
+
+
+    [HttpPut("complete-by-customer/{orderId}")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> CompleteByCustomer(int orderId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var order = await context.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId && o.CustomerId == userId);
+
+        if (order == null)
+            return NotFound("Order not found or you don't have access.");
+
+        order.isCompletedByCustomer = true;
+
+        var customer = await _context.Customers
+            .Where(t => t.UserId == userId)
+            .Include(o => o.User)
+            .FirstOrDefaultAsync();
+        if (order.isCompletedByTechnician)
+        {
+            order.Status = "Completed";
+        }
+
+        await context.SaveChangesAsync();
+        return Ok(new { message = "Order marked as completed by customer." });
+    }
+
+   
+    [HttpPut("complete-by-technician/{orderId}")]
+    [Authorize(Roles = "Technician")]
+    public async Task<IActionResult> CompleteByTechnician(int orderId, [FromBody] CompleteOrderDto request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // نجيب الأوردر مع الفني والعميل
+        var order = await context.Orders
+            .Include(o => o.Technician)
+            .Include(o => o.Customer)
+            .ThenInclude(c => c.User)
+            .FirstOrDefaultAsync(o => o.OrderId == orderId && o.TechnicianID == userId);
+
+        if (order == null)
+            return NotFound("Order not found or you don't have access.");
+
+        if (order.isCompletedByTechnician)
+            return BadRequest("Order is already completed by technician.");
+
+        if (request.Period <= 0)
+            return BadRequest(new { message = "برجاء إدخال مده أكبر من ال0" });
+
+        // حساب السعر
+        var price = order.Technician.PayByHour * request.Period;
+
+        if (order.Customer.Balanace < price)
+            return BadRequest(new { message  = "رصيد العميل غير كافي."});
+
+        // تحديث البيانات
+        order.Period = request.Period;
+        order.Price = price;
+        order.isCompletedByTechnician = true;
+        order.Customer.Balanace -= price;
+
+        if (order.isCompletedByCustomer)
+            order.Status = "Completed";
+
+        await context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "تم الاكتمال من الأوردر.",
+            totalPrice = price
+        });
+    }
+
+    
+    [HttpGet("top-services")]
+    public async Task<IActionResult> GetTopServices()
+    {
+        var topServices = await context.Orders
+        .Include(o => o.Technician)
+        .ThenInclude(t => t.Service)
+        .Where(o => o.Status == "Completed" && o.Technician != null && o.Technician.Service != null)
+        .GroupBy(o => o.Technician.Service!.Name)
+        .Select(group => new
+        {
+            ServiceName = group.Key,
+            OrderCount = group.Count()
+        })
+        .OrderByDescending(g => g.OrderCount)
+        .ToListAsync();
+
+        return Ok(topServices);
+    }
+
 }

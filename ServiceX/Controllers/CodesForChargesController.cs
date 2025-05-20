@@ -67,7 +67,7 @@ public class CodesForChargesController(ApplicationDbContext _context, IHttpConte
 
         if (codeInDb == null)
         {
-            return NotFound("الكود غير صالح");
+            return NotFound(new { message = "الكود غير صالح" });
         }
 
         // الحصول على المستخدم الحالي
@@ -77,7 +77,7 @@ public class CodesForChargesController(ApplicationDbContext _context, IHttpConte
 
         if (customer == null)
         {
-            return NotFound("العميل غير موجود");
+            return NotFound(new { message = "العميل غير موجود" });
         }
 
         customer.Balanace += 200;
