@@ -16,7 +16,6 @@ public class ServiceController(ApplicationDbContext context, IServiceServices _s
     private readonly ApplicationDbContext _context = context;
     private readonly IServiceServices serviceServices = _serviceServices;
 
-
     // ✅ 1️⃣ Get All Services (Everyone can access)
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -25,6 +24,7 @@ public class ServiceController(ApplicationDbContext context, IServiceServices _s
         return Ok(services.Adapt<IEnumerable<ServiceResponse>>());
     }
 
+    
     // ✅ 2️⃣ Get Service By ID (Everyone can access)
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
@@ -35,6 +35,7 @@ public class ServiceController(ApplicationDbContext context, IServiceServices _s
 
         return Ok(service.Adapt<ServiceResponse>());
     }
+    
     // ✅ البحث عن خدمة بالاسم (متاح للجميع)
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string name)
@@ -52,6 +53,7 @@ public class ServiceController(ApplicationDbContext context, IServiceServices _s
         return Ok(services);
     }
 
+   
     // ✅ 3️⃣ Create a New Service (Only Admin)
     [HttpPost]
     [Authorize(Roles = "Admin")]
@@ -66,9 +68,12 @@ public class ServiceController(ApplicationDbContext context, IServiceServices _s
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetById), new { id = addedService.Id }, addedService.Adapt<ServiceResponse>());
     }
+    
+    
     // ✅ 4️⃣ Update Service (Only Admin)
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
+    
     public async Task<IActionResult> Update(int id, [FromBody] ServoceRequest updatedService)
     {
         var service = await _context.Services.FindAsync(id);
@@ -81,6 +86,7 @@ public class ServiceController(ApplicationDbContext context, IServiceServices _s
         await _context.SaveChangesAsync();
         return Ok(service);
     }
+    
     [HttpGet("{serviceId}/technicians")]
     public async Task<IActionResult> GetTechniciansByService(int serviceId)
     {

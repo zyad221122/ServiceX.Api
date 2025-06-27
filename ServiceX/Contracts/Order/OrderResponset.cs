@@ -6,6 +6,11 @@ public class OrderResponset
     public string UserName { get; set; }
     public string OrderStatus { get; set; }
     public string problemDescription { get; set; }
+    public DateOnly date { get; set; }
+    public TimeOnly time { get; set; }
+    public string Address { get; set; }
+    public string Phone { get; set; }
+    public string? ImageUrl { get; set; }
     public string TechnicianName { get; set; }
     public string ServiceName { get; set; }
     public bool isCompletedByCustomer { get; set; } 

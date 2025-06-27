@@ -1,26 +1,16 @@
-﻿using Mapster;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ServiceX.Contracts.Order;
-using ServiceX.Entites;
-using ServiceX.Persistence;
-using System;
-using System.Security.Claims;
-
-namespace ServiceX.Controllers;
+﻿namespace ServiceX.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 
-public class OrderController(ApplicationDbContext _context,  IHttpContextAccessor _httpContextAccessor) : ControllerBase
+public class OrderController(ApplicationDbContext _context,  IHttpContextAccessor _httpContextAccessor, IOrderServices _orderServices) : ControllerBase
 {
     private readonly ApplicationDbContext context = _context;
     private readonly IHttpContextAccessor httpContextAccessor = _httpContextAccessor;
+    private readonly IOrderServices orderServices = _orderServices;
 
     [HttpPost("{techId}")]
     [Authorize(Roles = "Customer")]
-    public async Task<IActionResult> CreateOrder([FromRoute]string techId, [FromBody] OrderRequest request)
+    public async Task<IActionResult> CreateOrder([FromRoute]string techId, [FromForm] OrderRequest request, CancellationToken cancellationToken)
     {
         if (request == null)
             return BadRequest("Invalid order data");
@@ -33,19 +23,29 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
             .Include(o => o.User)
             .Include(o => o.Service)
             .FirstOrDefaultAsync();
+        
         var customer = await _context.Customers
             .Where(t => t.UserId == userId)
             .Include(o => o.User)
             .FirstOrDefaultAsync();
 
-        if (customer!.Balanace < 200)
-        {
-            return BadRequest(new { message = "برجاء شحن المحفظه" });
-        }
+        //if (customer!.Balanace < 200)
+        //{
+        //    return BadRequest(new { message = "برجاء شحن المحفظه" });
+        //}
+
         if (technician == null)
         {
             return BadRequest("No available technician for this service.");
         }
+        
+        DateTime requestDateTime = DateTime.Parse($"{request.date} {request.time}");
+        if (requestDateTime < DateTime.Now)
+        {
+            return BadRequest(new  { message = "برجاء التأكد من التاريخ" });
+        }
+
+        var imgname = await orderServices.UploadImageAsync(request.Cover!, cancellationToken);
         var order = new Order
         {
             CustomerId = userId,
@@ -53,6 +53,13 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
             Technician = technician,
             TechnicianID = technician.UserId, // ✅ إضافة الفني
             ProblemDescription = request.ProblemDescription, // ✅ إضافة الفني
+            //time = TimeOnly.Parse(request.time),
+            time = request.time,
+            //date = DateOnly.Parse(request.date),
+            date = request.date,
+            Phone = customer.User.Phone,
+            Address = request.Address,
+            ImageUrl = imgname,
             Status = "Pending",
             createdOn = DateTime.UtcNow
         };
@@ -104,7 +111,27 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
         return Ok(orders.Adapt<IEnumerable<OrderResponset>>());
     }
 
-    
+    [HttpGet("technician-orders/completed")]
+    [Authorize(Roles = "Technician")]
+    public async Task<IActionResult> GetTechnicianCompletedOrders()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized("User not authenticated");
+
+        var orders = await _context.Orders
+            .Where(o => o.TechnicianID == userId && o.Status == "Completed")
+            .Include(o => o.Customer)
+            .Include(o => o.Customer.User)
+            .Include(o => o.Technician)
+            .Include(o => o.Technician.User)
+            .Include(o => o.Technician.Service)
+            .ToListAsync();
+
+        return Ok(orders.Adapt<IEnumerable<OrderResponset>>());
+    }
+
+
     [HttpGet("my-orders/pending")]
     [Authorize]
     public async Task<IActionResult> GetMyPendingOrders()
@@ -120,6 +147,27 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
             .Include(o => o.Technician.Service)
             .Include(o => o.Customer)
             .Include(o => o.Customer.User)
+            .ToListAsync();
+
+        return Ok(orders.Adapt<IEnumerable<OrderResponset>>());
+    }
+
+    
+    [HttpGet("technician-orders/pending")]
+    [Authorize(Roles = "Technician")]
+    public async Task<IActionResult> GetTechnicianPendingOrders()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized("User not authenticated");
+
+        var orders = await _context.Orders
+            .Where(o => o.TechnicianID == userId && o.Status == "Pending")
+            .Include(o => o.Customer)
+            .Include(o => o.Customer.User)
+            .Include(o => o.Technician)
+            .Include(o => o.Technician.User)
+            .Include(o => o.Technician.Service)
             .ToListAsync();
 
         return Ok(orders.Adapt<IEnumerable<OrderResponset>>());
@@ -198,24 +246,26 @@ public class OrderController(ApplicationDbContext _context,  IHttpContextAccesso
         });
     }
 
-    
+
     [HttpGet("top-services")]
     public async Task<IActionResult> GetTopServices()
     {
         var topServices = await context.Orders
-        .Include(o => o.Technician)
-        .ThenInclude(t => t.Service)
-        .Where(o => o.Status == "Completed" && o.Technician != null && o.Technician.Service != null)
-        .GroupBy(o => o.Technician.Service!.Name)
-        .Select(group => new
-        {
-            ServiceName = group.Key,
-            OrderCount = group.Count()
-        })
-        .OrderByDescending(g => g.OrderCount)
-        .ToListAsync();
+            .Include(o => o.Technician)
+            .ThenInclude(t => t.Service)
+            .Where(o => o.Status == "Completed" && o.Technician != null && o.Technician.Service != null)
+            .GroupBy(o => new { o.Technician.Service!.Name, o.Technician.Service.ImageUrl }) // نجمع حسب الاسم والصورة
+            .Select(group => new
+            {
+                ServiceName = group.Key.Name,
+                OrderCount = group.Count(),
+                Image = group.Key.ImageUrl
+            })
+            .OrderByDescending(g => g.OrderCount)
+            .ToListAsync();
 
         return Ok(topServices);
     }
+
 
 }

@@ -17,6 +17,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IServiceServices, ServiceSeervices>();
         services.AddScoped<IAuthServices, AuthServices>();
+        services.AddScoped<IOrderServices, OrderServices>();
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
         services.AddScoped<IEmailService, EmailService>();
 

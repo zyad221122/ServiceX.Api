@@ -5,14 +5,23 @@ namespace ServiceX.Entites;
 public class Order
 {
     public int OrderId { get; set; }
-    public string Status { get; set; }
     public string ProblemDescription { get; set; }
+    public string Address { get; set; }
+    public string? Phone { get; set; }
+    public DateOnly date {  get; set; }
+    public TimeOnly time { get; set; }
+    public string? ImageUrl { get; set; } = string.Empty;
+    public string Status { get; set; }
     public DateTime RequestDate { get; set; }
     public string CustomerId { get; set; }
+    
+    #region When it completes
     public bool isCompletedByCustomer { get; set; } = false;
     public bool isCompletedByTechnician { get; set; } = false;
     public double Period { get; set; }
-    public double Price { get; set; } = 0;
+    public double Price { get; set; } = 0; 
+    #endregion
+    
     [JsonIgnore]
     public Customer Customer { get; set; }
     public string TechnicianID { get; set; }

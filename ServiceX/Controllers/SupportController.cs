@@ -9,6 +9,7 @@ namespace ServiceX.Controllers;
 public class SupportController(ApplicationDbContext _context) : ControllerBase
 {
     private readonly ApplicationDbContext context = _context;
+    
     [HttpPost("send")]
     public async Task<IActionResult> SendSupportMessage([FromBody] SupportMessageRequest request)
     {

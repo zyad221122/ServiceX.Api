@@ -164,6 +164,7 @@ public class AuthController(
 
         return Ok("OTP sent to email.");
     }
+    
     [HttpPost("verify-otp")]
     public IActionResult VerifyOtp([FromBody] OtpVerifyModel model)
     {

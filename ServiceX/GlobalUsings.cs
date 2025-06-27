@@ -18,3 +18,5 @@ global using System.Text.Json;
 global using System.Threading;
 global using Microsoft.AspNetCore.Authorization;
 global using ServiceX.Contracts.UserContract;
+global using Mapster;
+global using ServiceX.Contracts.Order;

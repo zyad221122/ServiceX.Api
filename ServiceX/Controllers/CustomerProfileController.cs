@@ -1,12 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ServiceX.Contracts.UserContract;
-using System;
-using System.Security.Claims;
+﻿namespace ServiceX.Controllers;
 
-namespace ServiceX.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 public class CustomerProfileController(ApplicationDbContext context, IWebHostEnvironment env) : ControllerBase

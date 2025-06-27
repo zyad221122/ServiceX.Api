@@ -7,5 +7,6 @@ public class TechDto
     public string PhoneNumber { get; set; }
     public string Address { get; set; }
     public string ServiceName { get; set; }
+    public int PayByHour { get; set; }
     public string ProfileImageUrl { get; set; } // رابط الصورة
 }

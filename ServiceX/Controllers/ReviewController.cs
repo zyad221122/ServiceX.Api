@@ -10,6 +10,7 @@ namespace ServiceX.Controllers;
 public class ReviewController  (ApplicationDbContext _context) : ControllerBase
 {
     private readonly ApplicationDbContext context = _context;
+    
     [HttpPost]
     public async Task<IActionResult> AddReview([FromBody] ReviewRequest request)
     {
@@ -62,7 +63,6 @@ public class ReviewController  (ApplicationDbContext _context) : ControllerBase
     }
 
     [HttpGet("average-rating/{technicianId}")]
-    
     public async Task<IActionResult> GetAverageRatingForTechnician([FromRoute]string technicianId)
     {
         var orders = await context.Orders
@@ -116,5 +116,64 @@ public class ReviewController  (ApplicationDbContext _context) : ControllerBase
             r.OrderId
         }));
     }
+
+
+    [HttpGet("service/{serviceId}/technicians-with-reviews")]
+    public async Task<IActionResult> GetTechniciansWithReviewsByService(int serviceId)
+    {
+        var technicians = await _context.Technicians
+            .Where(t => t.ServiceId == serviceId)
+            .Include(t => t.User)
+            .Include(t => t.Service)
+            .ToListAsync();
+
+        if (!technicians.Any())
+            return NotFound(new { message = "No technicians found for this service" });
+
+        var technicianIds = technicians.Select(t => t.UserId).ToList();
+
+        var orders = await context.Orders
+            .Where(o => technicianIds.Contains(o.TechnicianID))
+            .ToListAsync();
+
+        var reviews = await context.Reviews
+            .Where(r => orders.Select(o => o.OrderId).Contains(r.OrderId))
+            .Include(r => r.Customer).ThenInclude(c => c.User)
+            .ToListAsync();
+
+        var result = technicians.Select(t =>
+        {
+            var technicianOrders = orders.Where(o => o.TechnicianID == t.UserId).Select(o => o.OrderId).ToList();
+            var technicianReviews = reviews.Where(r => technicianOrders.Contains(r.OrderId)).ToList();
+
+            var averageRating = technicianReviews.Any()
+                ? Math.Round(technicianReviews.Average(r => r.RatingValue), 2)
+                : 0;
+
+            return new
+            {
+                TechnicalId = t.UserId,
+                FullName = $"{t.User.FirstName} {t.User.LastName}",
+                t.User.Email,
+                t.User.Phone,
+                t.Address,
+                t.User.ImageUrl,
+                t.PayByHour,
+                ServiceName = t.Service.Name,
+                AverageRating = averageRating,
+                TotalReviews = technicianReviews.Count,
+                Reviews = technicianReviews.Select(r => new
+                {
+                    r.RatingValue,
+                    r.Comments,
+                    CustomerName = r.Customer?.User?.FirstName + " " + r.Customer?.User?.LastName,
+                    r.OrderId
+                })
+            };
+        });
+
+        return Ok(result);
+    }
+
 
 }
